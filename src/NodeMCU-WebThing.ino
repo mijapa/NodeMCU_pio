@@ -38,6 +38,10 @@ ThingProperty ledStripColor("color", "The color of light in RGB", STRING, "Color
 bool lastOn = false;
 String color = "#ffffff";
 
+void dhtHandle();
+
+void stripHandle();
+
 void sample() {
     isTimeToSample = true;
 }
@@ -176,7 +180,7 @@ int twoHex2int(String hex) {
 void updateLedStrip(String *color, int const level) {
     if (!color) return;
     int red, green, blue;
-    if (color && (color->length() == 7) && color->charAt(0) == '#') {
+    if ((color->length() == 7) && color->charAt(0) == '#') {
         red = twoHex2int(color->substring(1, 3));
         green = twoHex2int(color->substring(3, 5));
         blue = twoHex2int(color->substring(5, 7));
@@ -200,6 +204,29 @@ void setup() {
 
 void loop() {
     ArduinoOTA.handle();
+    dhtHandle();
+    stripHandle();
+    adapter->update();
+}
+
+void stripHandle() {
+    bool on = ledStripOn.getValue().boolean;
+    int level = ledStripLevel.getValue().number;
+    updateLedStrip(&color, on ? level : 0);
+
+    if (on != lastOn) {
+        Serial.print(ledStrip.id);
+        Serial.print(": on: ");
+        Serial.print(on);
+        Serial.print(", level: ");
+        Serial.print(level);
+        Serial.print(", color: ");
+        Serial.println(color);
+    }
+    lastOn = on;
+}
+
+void dhtHandle() {
     if (isTimeToSample) {
         float humidity = dht.getHumidity();
         float temperature = dht.getTemperature();
@@ -220,20 +247,4 @@ void loop() {
         humiditySensorProperty.setValue(humidityValue);
         isTimeToSample = false;
     }
-    bool on = ledStripOn.getValue().boolean;
-    int level = ledStripLevel.getValue().number;
-    updateLedStrip(&color, on ? level : 0);
-
-    if (on != lastOn) {
-        Serial.print(ledStrip.id);
-        Serial.print(": on: ");
-        Serial.print(on);
-        Serial.print(", level: ");
-        Serial.print(level);
-        Serial.print(", color: ");
-        Serial.println(color);
-    }
-    lastOn = on;
-
-    adapter->update();
 }
