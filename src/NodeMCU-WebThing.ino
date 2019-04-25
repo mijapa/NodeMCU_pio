@@ -4,6 +4,7 @@
 #include "WebThingAdapter.h"
 #include "user_config.h"
 #include <Adafruit_NeoPixel.h>
+#include <ArduinoOTA.h>
 
 #define DHTPIN D5 // Pin which is connected to the DHT sensor.
 #define PIN_PIXELS D3 //Pin which is connected to the NeoPixels strip.
@@ -80,6 +81,12 @@ void setupWiFi() {
     Serial.println(STA_SSID1);
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
+
+
+    if (!MDNS.begin("esp8266")) {             // Start the mDNS responder for esp8266.local
+        Serial.println("Error setting up MDNS responder!");
+    }
+    Serial.println("mDNS responder started");
 }
 
 void webThingSetup() {
@@ -114,6 +121,42 @@ void webThingSetup() {
    hex2int
    take a 2 digit hex string and convert it to a integer
 */
+
+void otaSetup() {
+    // Port defaults to 8266
+    // ArduinoOTA.setPort(8266);
+
+    // Hostname defaults to esp8266-[ChipID]
+    // ArduinoOTA.setHostname("myesp8266");
+
+    // No authentication by default
+    // ArduinoOTA.setPassword((const char *)"123");
+
+    ArduinoOTA.onStart([]() {
+        Serial.println("Start");
+    });
+    ArduinoOTA.onEnd([]() {
+        Serial.println("\nEnd");
+    });
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+        Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    });
+    ArduinoOTA.onError([](ota_error_t error) {
+        Serial.printf("Error[%u]: ", error);
+        if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+        else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+        else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+        else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+        else if (error == OTA_END_ERROR) Serial.println("End Failed");
+        ESP.restart();
+    });
+
+    ArduinoOTA.begin();
+    Serial.println("OTA ready");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+}
+
 int twoHex2int(String hex) {
     int len = 2;
     int i;
@@ -150,11 +193,13 @@ void setup() {
     Serial.println();
     setupDHT();
     setupWiFi();
+    otaSetup();
     webThingSetup();
     pixels.begin();
 }
 
 void loop() {
+    ArduinoOTA.handle();
     if (isTimeToSample) {
         float humidity = dht.getHumidity();
         float temperature = dht.getTemperature();
