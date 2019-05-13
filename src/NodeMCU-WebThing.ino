@@ -5,7 +5,7 @@
 #include "user_config.h"
 #include <Adafruit_NeoPixel.h>
 #include <ArduinoOTA.h>
-#include <user_configDD.h>
+#include <user_config.h>
 
 #define DHTPIN D5 // Pin which is connected to the DHT sensor.
 #define PIN_PIXELS D3 //Pin which is connected to the NeoPixels strip.
