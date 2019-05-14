@@ -87,11 +87,14 @@ void setupWiFi() {
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
 
-
-    if (!MDNS.begin("esp8266")) {             // Start the mDNS responder for esp8266.local
+    if (MDNS.begin("esp8266")) {// Start the mDNS responder for esp8266.local
+        MDNS.addService("http", "tcp", 80);
+        MDNS.addServiceTxt("http", "tcp", "url", "http://esp8266.local");
+        MDNS.addServiceTxt("http", "tcp", "webthing", "true");
+        Serial.println("MDNS responder started");
+    } else {
         Serial.println("Error setting up MDNS responder!");
     }
-    Serial.println("mDNS responder started");
 }
 
 void webThingSetup() {
@@ -121,11 +124,6 @@ void webThingSetup() {
     Serial.print("/things/");
     Serial.println(dhtSensor.id);
 }
-
-/**
-   hex2int
-   take a 2 digit hex string and convert it to a integer
-*/
 
 void otaSetup() {
     // Port defaults to 8266
@@ -162,6 +160,10 @@ void otaSetup() {
     Serial.println(WiFi.localIP());
 }
 
+/**
+   hex2int
+   take a 2 digit hex string and convert it to a integer
+*/
 int twoHex2int(String hex) {
     int len = 2;
     int i;
@@ -180,7 +182,7 @@ int twoHex2int(String hex) {
 
 void updateLedStrip(String *color, int const level) {
     if (!color) return;
-    int red, green, blue;
+    int red = 0, green = 0, blue = 0;
     if ((color->length() == 7) && color->charAt(0) == '#') {
         red = twoHex2int(color->substring(1, 3));
         green = twoHex2int(color->substring(3, 5));
