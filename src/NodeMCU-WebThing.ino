@@ -6,10 +6,14 @@
 #include <Adafruit_NeoPixel.h>
 #include <ArduinoOTA.h>
 #include <user_config.h>
+#include <ESPAsyncWebServer.h>     //Local WebServer used to serve the configuration portal
+#include <ESPAsyncWiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
+#include <DNSServer.h>
 
 #define DHTPIN D5 // Pin which is connected to the DHT sensor.
 #define PIN_PIXELS D3 //Pin which is connected to the NeoPixels strip.
 #define NUM_PIXELS 8
+#define BUILTIN_LED D4
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUM_PIXELS, PIN_PIXELS, NEO_GRB + NEO_KHZ800);
 
@@ -21,6 +25,7 @@ Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUM_PIXELS, PIN_PIXELS, NEO_GRB + N
 
 DHTesp dht;
 Ticker sampler;
+Ticker ledTicker;
 boolean isTimeToSample = false;
 
 WebThingAdapter *adapter = NULL;
@@ -39,6 +44,25 @@ ThingProperty ledStripColor("color", "The color of light in RGB", STRING, "Color
 bool lastOn = false;
 String color = "#ffffff";
 
+AsyncWebServer server(80);
+DNSServer dns;
+
+void blink() {
+    //toggle state
+    int state = digitalRead(BUILTIN_LED);  // get the current state of GPIO1 pin
+    digitalWrite(BUILTIN_LED, !state);     // set pin to the opposite state
+}
+
+//gets called when WiFiManager enters configuration mode
+void configModeCallback(AsyncWiFiManager *myWiFiManager) {
+    Serial.println("Entered config mode");
+    Serial.println(WiFi.softAPIP());
+    //if you used auto generated SSID, print it
+    Serial.println(myWiFiManager->getConfigPortalSSID());
+    //entered config mode, make led toggle faster
+    ledTicker.attach_ms(100, blink);
+}
+
 void dhtHandle();
 
 void stripHandle();
@@ -53,37 +77,35 @@ void setupDHT() {
 }
 
 void setupWiFi() {
-#if defined(LED_BUILTIN)
-    const int ledPin = LED_BUILTIN;
-#else
-    const int ledPin = 13;  // manully configure LED pin
-#endif
-    pinMode(ledPin, OUTPUT);
-    digitalWrite(ledPin, HIGH);
-    Serial.begin(115200);
-    Serial.println("");
-    Serial.print("Connecting to \"");
-    Serial.print(STA_SSID1);
-    Serial.println("\"");
-#if defined(ESP8266) || defined(ESP32)
-    WiFi.mode(WIFI_STA);
-#endif
-    WiFi.begin(STA_SSID1, STA_PASS1);
-    Serial.println("");
 
-    // Wait for connection
-    bool blink = true;
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-        digitalWrite(ledPin, blink ? LOW : HIGH); // active low led
-        blink = !blink;
+    pinMode(BUILTIN_LED, OUTPUT);
+    digitalWrite(BUILTIN_LED, HIGH);
+    Serial.begin(115200);
+
+
+    //WiFiManager
+    //Local intialization. Once its business is done, there is no need to keep it around
+    AsyncWiFiManager wifiManager(&server, &dns);
+    //reset settings - for testing
+    //wifiManager.resetSettings();
+
+    //set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
+    wifiManager.setAPCallback(configModeCallback);
+
+    //fetches ssid and pass and tries to connect
+    //if it does not connect it starts an access point with the specified name
+    //here  "AutoConnectAP"
+    //and goes into a blocking loop awaiting configuration
+    if (!wifiManager.autoConnect()) {
+        Serial.println("failed to connect and hit timeout");
+        //reset and try again, or maybe put it to deep sleep
+        ESP.reset();
+        delay(1000);
     }
-    digitalWrite(ledPin, HIGH); // active low led
 
     Serial.println("");
     Serial.print("Connected to ");
-    Serial.println(STA_SSID1);
+    Serial.println(WiFi.BSSIDstr());
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
 
