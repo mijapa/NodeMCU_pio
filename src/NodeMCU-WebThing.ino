@@ -2,7 +2,6 @@
 #include <Ticker.h>
 #include "Thing.h"
 #include "WebThingAdapter.h"
-#include "user_config.h"
 #include <Adafruit_NeoPixel.h>
 #include <ArduinoOTA.h>
 #include <user_config.h>

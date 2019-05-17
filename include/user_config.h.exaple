@@ -1,2 +1,0 @@
-#define STA_SSID1 "" // [Ssid1] Wifi SSID
-#define STA_PASS1 "" // [Password1] Wifi password
