@@ -13,7 +13,7 @@
 #define DHTPIN D5 // Pin which is connected to the DHT sensor.
 #define PIN_PIXELS D3 //Pin which is connected to the NeoPixels strip.
 #define NUM_PIXELS 8
-#define BUILTIN_LED D4
+#define DQ7_PIN 8
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUM_PIXELS, PIN_PIXELS, NEO_GRB + NEO_KHZ800);
 
@@ -40,6 +40,10 @@ ThingProperty ledStripOn("on", "Whether the led is turned on", BOOLEAN, "OnOffPr
 ThingProperty ledStripLevel("level", "The level of light from 0-100", NUMBER, "BrightnessProperty");
 ThingProperty ledStripColor("color", "The color of light in RGB", STRING, "ColorProperty");
 
+const char *DQ7sensorTypes[] = {"MultiLevelSensor", "Sensor", nullptr};
+ThingDevice DQ7Sensor("dq7", "CO gas sensor", DQ7sensorTypes);
+ThingProperty gasSensorProperty("gas", "CO gas level", NUMBER, "LevelProperty");
+
 bool lastOn = false;
 String color = "#ffffff";
 
@@ -49,6 +53,8 @@ DNSServer dns;
 void dhtHandle();
 
 void stripHandle();
+
+void dq7Handle();
 
 void sample() {
     isTimeToSample = true;
@@ -78,6 +84,9 @@ void webThingSetup() {
     ledStripLevel.setValue(levelValue);
     ledStrip.addProperty(&ledStripLevel);
     adapter->addDevice(&ledStrip);
+
+    DQ7Sensor.addProperty(&gasSensorProperty);
+    adapter->addDevice(&DQ7Sensor);
 
     adapter->begin();
     Serial.println("HTTP server started");
@@ -169,9 +178,22 @@ void setup() {
 
 void loop() {
     ArduinoOTA.handle();
+    dq7Handle();
     dhtHandle();
     stripHandle();
     adapter->update();
+}
+
+void dq7Handle() {
+    float gas = analogRead(DQ7_PIN);
+    if (isTimeToSample) {
+        Serial.println("Gas: ");
+        Serial.print(gas);
+    }
+    ThingPropertyValue gasValue;
+    gasValue.number = gas;
+    gasSensorProperty.setValue(gasValue);
+    delay(500);
 }
 
 void stripHandle() {
