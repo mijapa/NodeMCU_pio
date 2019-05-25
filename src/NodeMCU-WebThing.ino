@@ -13,7 +13,7 @@
 #define DHTPIN D5 // Pin which is connected to the DHT sensor.
 #define PIN_PIXELS D3 //Pin which is connected to the NeoPixels strip.
 #define NUM_PIXELS 8
-#define DQ7_PIN 8
+#define DQ7_PIN A0
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUM_PIXELS, PIN_PIXELS, NEO_GRB + NEO_KHZ800);
 
@@ -43,6 +43,15 @@ ThingProperty ledStripColor("color", "The color of light in RGB", STRING, "Color
 const char *DQ7sensorTypes[] = {"MultiLevelSensor", "Sensor", nullptr};
 ThingDevice DQ7Sensor("dq7", "CO gas sensor", DQ7sensorTypes);
 ThingProperty gasSensorProperty("gas", "CO gas level", NUMBER, "LevelProperty");
+
+const char *DQ2sensorTypes[] = {"MultiLevelSensor", "Sensor", nullptr};
+ThingDevice DQ2Sensor("dq2", "Propane gas sensor", DQ7sensorTypes);
+ThingProperty propaneGasSensorProperty("gas", "Propane gas level", NUMBER, "LevelProperty");
+
+const char *PompTypes[] = {"OnOffSwitch", nullptr};
+ThingDevice pomp("pomp", "Water pomp", DQ7sensorTypes);
+ThingProperty pompProperty("gas", "Whether the pomp is turned on", BOOLEAN, "OnOffProperty");
+
 
 bool lastOn = false;
 String color = "#ffffff";
@@ -87,6 +96,12 @@ void webThingSetup() {
 
     DQ7Sensor.addProperty(&gasSensorProperty);
     adapter->addDevice(&DQ7Sensor);
+
+    DQ2Sensor.addProperty(&propaneGasSensorProperty);
+    adapter->addDevice(&DQ2Sensor);
+
+    pomp.addProperty(&pompProperty);
+    adapter->addDevice(&pomp);
 
     adapter->begin();
     Serial.println("HTTP server started");
