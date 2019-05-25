@@ -10,13 +10,15 @@
 #include <ESPAsyncWiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
 #include <DNSServer.h>
 
+//define pins
 #define DHTPIN D5 // Pin which is connected to the DHT sensor.
 #define PIN_PIXELS D3 //Pin which is connected to the NeoPixels strip.
-#define NUM_PIXELS 8
 #define DQ7_PIN A0
 
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUM_PIXELS, PIN_PIXELS, NEO_GRB + NEO_KHZ800);
+#define NUM_PIXELS 8
 
+//creating led streep driving class
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUM_PIXELS, PIN_PIXELS, NEO_GRB + NEO_KHZ800);
 
 #ifdef ESP32
 #pragma message(THIS EXAMPLE IS FOR ESP8266 ONLY!)
@@ -24,11 +26,12 @@ Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUM_PIXELS, PIN_PIXELS, NEO_GRB + N
 #endif
 
 DHTesp dht;
-Ticker sampler;
+Ticker sampler; //timer for dht
 boolean isTimeToSample = false;
 
 WebThingAdapter *adapter = NULL;
 
+//defining devices and sensors
 const char *sensorTypes[] = {"TemperatureSensor", "MultiLevelSensor", "Sensor", nullptr};
 ThingDevice dhtSensor("dht4", "DHT22 Temperature & Humidity sensor", sensorTypes);
 ThingProperty tempSensorProperty("temperature", "Temperature", NUMBER, "TemperatureProperty");
@@ -56,6 +59,7 @@ ThingProperty pompProperty("gas", "Whether the pomp is turned on", BOOLEAN, "OnO
 bool lastOn = false;
 String color = "#ffffff";
 
+//defining server and dns
 AsyncWebServer server(80);
 DNSServer dns;
 
@@ -65,20 +69,25 @@ void stripHandle();
 
 void dq7Handle();
 
+//callback function for dht
 void sample() {
     isTimeToSample = true;
 }
 
+//dht initializing
 void setupDHT() {
     dht.setup(DHTPIN, DHTesp::DHT22);
     sampler.attach_ms(dht.getMinimumSamplingPeriod(), sample);
 }
 
 void webThingSetup() {
+    //creating adapter
     adapter = new WebThingAdapter("NodeMCU1", WiFi.localIP());
 
+    //adding properties to device
     dhtSensor.addProperty(&tempSensorProperty);
     dhtSensor.addProperty(&humiditySensorProperty);
+    //adding device(sensor) to adapter
     adapter->addDevice(&dhtSensor);
 
     ledStrip.addProperty(&ledStripOn);
@@ -111,6 +120,7 @@ void webThingSetup() {
     Serial.println(dhtSensor.id);
 }
 
+//initialization On The Air Update
 void otaSetup() {
     // Port defaults to 8266
     // ArduinoOTA.setPort(8266);
@@ -166,6 +176,7 @@ int twoHex2int(String hex) {
     return val;
 }
 
+//updating light
 void updateLedStrip(String *color, int const level) {
     if (!color) return;
     int red = 0, green = 0, blue = 0;
@@ -181,6 +192,7 @@ void updateLedStrip(String *color, int const level) {
     }
 }
 
+// main initialization function
 void setup() {
     Serial.begin(115200);
     Serial.println();
@@ -191,6 +203,7 @@ void setup() {
     pixels.begin();
 }
 
+//main loop function
 void loop() {
     ArduinoOTA.handle();
     dq7Handle();
@@ -199,6 +212,7 @@ void loop() {
     adapter->update();
 }
 
+//servicing gas sensor
 void dq7Handle() {
     float gas = analogRead(DQ7_PIN);
     if (isTimeToSample) {
@@ -211,6 +225,7 @@ void dq7Handle() {
     delay(500);
 }
 
+//servicing dimmable color led light
 void stripHandle() {
     bool on = ledStripOn.getValue().boolean;
     int level = ledStripLevel.getValue().number;
@@ -228,6 +243,7 @@ void stripHandle() {
     lastOn = on;
 }
 
+//servicing temperature and humidity sensor
 void dhtHandle() {
     if (isTimeToSample) {
         float humidity = dht.getHumidity();
