@@ -1,0 +1,8 @@
+#ifndef NODEMCU_BMP280_WEBTHING_OTA_H
+#define NODEMCU_BMP280_WEBTHING_OTA_H
+
+#endif //NODEMCU_BMP280_WEBTHING_OTA_H
+
+void setupOTA();
+
+void loopOTA();

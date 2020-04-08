@@ -1,0 +1,8 @@
+#ifndef NODEMCU_BMP280_WEBTHING_WEBTHINGS_H
+#define NODEMCU_BMP280_WEBTHING_WEBTHINGS_H
+
+#endif //NODEMCU_BMP280_WEBTHING_WEBTHINGS_H
+
+void setupWebthings();
+
+void loopWebthings();
