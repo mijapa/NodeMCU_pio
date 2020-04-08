@@ -4,9 +4,6 @@
 #include "webthings.h"
 #include "wifiManager.h"
 
-
-#define BUILTIN_LED D4
-
 #ifdef ESP32
 #pragma message(THIS EXAMPLE IS FOR ESP8266 ONLY!)
 #error Select ESP8266 board.
@@ -24,5 +21,5 @@ void setup() {
 void loop() {
     loopOTA();
     loopWebthings();
-    delay(100);
+    delay(2000);
 }

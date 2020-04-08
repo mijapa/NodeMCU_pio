@@ -3,6 +3,8 @@
 #include <ESPAsyncWebServer.h>     //Local WebServer used to serve the configuration portal
 #include <ESPAsyncWiFiManager.h>
 
+#define BUILTIN_LED D4
+
 Ticker ledTicker;
 
 void blink() {

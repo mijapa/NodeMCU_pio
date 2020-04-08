@@ -16,13 +16,6 @@ void setup_webthing_bmp280(WebThingAdapter *adapter) {
     weatherPres.multipleOf = 0.01;
     weather.addProperty(&weatherPres);
     adapter->addDevice(&weather);
-
-    adapter->begin();
-    Serial.println("HTTP server started");
-    Serial.print("http://");
-    Serial.print(WiFi.localIP());
-    Serial.print("/things/");
-    Serial.print("\n\n");
 }
 
 void loop_webthing_bmp280(WebThingAdapter *adapter) {
