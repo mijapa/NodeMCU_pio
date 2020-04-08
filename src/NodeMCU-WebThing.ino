@@ -1,50 +1,84 @@
-#include "DHTesp.h"
 #include <Ticker.h>
 #include "Thing.h"
 #include "WebThingAdapter.h"
-#include <Adafruit_NeoPixel.h>
 #include <ArduinoOTA.h>
-#include <user_config.h>
 #include <ESPAsyncWebServer.h>     //Local WebServer used to serve the configuration portal
 #include <ESPAsyncWiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
 #include <DNSServer.h>
 
-#define DHTPIN D5 // Pin which is connected to the DHT sensor.
-#define PIN_PIXELS D3 //Pin which is connected to the NeoPixels strip.
-#define NUM_PIXELS 8
+#include <Wire.h>
+#include <SPI.h>
+#include <Adafruit_BMP280.h>
+
 #define BUILTIN_LED D4
 
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUM_PIXELS, PIN_PIXELS, NEO_GRB + NEO_KHZ800);
-
+Adafruit_BMP280 bmp; // I2C
 
 #ifdef ESP32
 #pragma message(THIS EXAMPLE IS FOR ESP8266 ONLY!)
 #error Select ESP8266 board.
 #endif
 
-DHTesp dht;
-Ticker sampler;
-Ticker ledTicker;
-boolean isTimeToSample = false;
 
 WebThingAdapter *adapter = NULL;
 
-const char *sensorTypes[] = {"TemperatureSensor", "MultiLevelSensor", "Sensor", nullptr};
-ThingDevice dhtSensor("dht4", "DHT22 Temperature & Humidity sensor", sensorTypes);
-ThingProperty tempSensorProperty("temperature", "Temperature", NUMBER, "TemperatureProperty");
-ThingProperty humiditySensorProperty("humidity", "Humidity", NUMBER, "LevelProperty");
-
-const char *ledStripTypes[] = {"Light", "OnOffSwitch", "ColorControl", nullptr};
-ThingDevice ledStrip("strip", "Dimmable Color Light", ledStripTypes);
-ThingProperty ledStripOn("on", "Whether the led is turned on", BOOLEAN, "OnOffProperty");
-ThingProperty ledStripLevel("level", "The level of light from 0-100", NUMBER, "BrightnessProperty");
-ThingProperty ledStripColor("color", "The color of light in RGB", STRING, "ColorProperty");
-
-bool lastOn = false;
-String color = "#ffffff";
 
 AsyncWebServer server(80);
 DNSServer dns;
+
+Ticker ledTicker;
+
+const char *bmp280Types[] = {"TemperatureSensor", nullptr};
+ThingDevice weather("bmp280", "BMP280 Weather Sensor", bmp280Types);
+ThingProperty weatherTemp("temperature", "", NUMBER, "TemperatureProperty");
+ThingProperty weatherPres("pressure", "", NUMBER, nullptr);
+
+void check_if_exist_I2C() {
+    byte error, address;
+    int nDevices;
+    nDevices = 0;
+    for (address = 1; address < 127; address++) {
+        // The i2c_scanner uses the return value of
+        // the Write.endTransmisstion to see if
+        // a device did acknowledge to the address.
+        Wire.beginTransmission(address);
+        error = Wire.endTransmission();
+        if (error == 0) {
+            Serial.print("I2C device found at address 0x");
+            if (address < 16)
+                Serial.print("0");
+            Serial.print(address, HEX);
+            Serial.println("  !");
+            nDevices++;
+        } else if (error == 4) {
+            Serial.print("Unknow error at address 0x");
+            if (address < 16)
+                Serial.print("0");
+            Serial.println(address, HEX);
+        }
+    } //for loop
+    if (nDevices == 0)
+        Serial.println("No I2C devices found");
+    else
+        Serial.println("**********************************\n");
+    //delay(1000);           // wait 1 seconds for next scan, did not find it necessary
+}
+
+void bmpSetup() {
+    Wire.begin(D2, D3);
+    check_if_exist_I2C();
+    while (!bmp.begin(0x76)) {
+        Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
+    }
+
+    /* Default settings from datasheet. */
+    bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
+                    Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
+                    Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
+                    Adafruit_BMP280::FILTER_X16,      /* Filtering. */
+                    Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
+}
+
 
 void blink() {
     //toggle state
@@ -62,18 +96,6 @@ void configModeCallback(AsyncWiFiManager *myWiFiManager) {
     ledTicker.attach_ms(100, blink);
 }
 
-void dhtHandle();
-
-void stripHandle();
-
-void sample() {
-    isTimeToSample = true;
-}
-
-void setupDHT() {
-    dht.setup(DHTPIN, DHTesp::DHT22);
-    sampler.attach_ms(dht.getMinimumSamplingPeriod(), sample);
-}
 
 void setupWiFi() {
 
@@ -121,29 +143,28 @@ void setupWiFi() {
 void webThingSetup() {
     adapter = new WebThingAdapter("NodeMCU1", WiFi.localIP());
 
-    dhtSensor.addProperty(&tempSensorProperty);
-    dhtSensor.addProperty(&humiditySensorProperty);
-    adapter->addDevice(&dhtSensor);
-
-    ledStrip.addProperty(&ledStripOn);
-
-    ThingPropertyValue colorValue;
-    colorValue.string = &color; //default color is white
-    ledStripColor.setValue(colorValue);
-    ledStrip.addProperty(&ledStripColor);
-
-    ThingPropertyValue levelValue;
-    levelValue.number = 100;
-    ledStripLevel.setValue(levelValue);
-    ledStrip.addProperty(&ledStripLevel);
-    adapter->addDevice(&ledStrip);
+    weatherTemp.unit = "celsius";
+    weather.addProperty(&weatherTemp);
+    weather.addProperty(&weatherPres);
+    adapter->addDevice(&weather);
 
     adapter->begin();
     Serial.println("HTTP server started");
     Serial.print("http://");
     Serial.print(WiFi.localIP());
     Serial.print("/things/");
-    Serial.println(dhtSensor.id);
+    Serial.print("\n\n");
+}
+
+
+void readBME280Data() {
+    float temp(NAN), pres(NAN);
+
+    ThingPropertyValue value;
+    value.number = bmp.readPressure();
+    weatherPres.setValue(value);
+    value.number = bmp.readTemperature();
+    weatherTemp.setValue(value);
 }
 
 void otaSetup() {
@@ -181,94 +202,18 @@ void otaSetup() {
     Serial.println(WiFi.localIP());
 }
 
-/**
-   hex2int
-   take a 2 digit hex string and convert it to a integer
-*/
-int twoHex2int(String hex) {
-    int len = 2;
-    int i;
-    int val = 0;
-
-    for (i = 0; i < len; i++) {
-        if (hex[i] <= '9')
-            val += (hex[i] - '0') * (1 << (4 * (len - 1 - i)));
-        else if (hex[i] <= 'F')
-            val += (hex[i] - 'A' + 10) * (1 << (4 * (len - 1 - i)));
-        else
-            val += (hex[i] - 'a' + 10) * (1 << (4 * (len - 1 - i)));
-    }
-    return val;
-}
-
-void updateLedStrip(String *color, int const level) {
-    if (!color) return;
-    int red = 0, green = 0, blue = 0;
-    if ((color->length() == 7) && color->charAt(0) == '#') {
-        red = twoHex2int(color->substring(1, 3));
-        green = twoHex2int(color->substring(3, 5));
-        blue = twoHex2int(color->substring(5, 7));
-    }
-    for (int i = 0; i < NUM_PIXELS; i++) {
-        pixels.setPixelColor(i, pixels.Color(red, green, blue));
-        pixels.setBrightness(level);
-        pixels.show();
-    }
-}
 
 void setup() {
     Serial.begin(115200);
     Serial.println();
-    setupDHT();
     setupWiFi();
     otaSetup();
     webThingSetup();
-    pixels.begin();
+    bmpSetup();
 }
 
 void loop() {
     ArduinoOTA.handle();
-    dhtHandle();
-    stripHandle();
+    readBME280Data();
     adapter->update();
-}
-
-void stripHandle() {
-    bool on = ledStripOn.getValue().boolean;
-    int level = ledStripLevel.getValue().number;
-    updateLedStrip(&color, on ? level : 0);
-
-    if (on != lastOn) {
-        Serial.print(ledStrip.id);
-        Serial.print(": on: ");
-        Serial.print(on);
-        Serial.print(", level: ");
-        Serial.print(level);
-        Serial.print(", color: ");
-        Serial.println(color);
-    }
-    lastOn = on;
-}
-
-void dhtHandle() {
-    if (isTimeToSample) {
-        float humidity = dht.getHumidity();
-        float temperature = dht.getTemperature();
-        Serial.println("Status\tHumidity (%)\tTemperature (C)\tHeatIndex (C)");
-        Serial.print(dht.getStatusString());
-        Serial.print("\t");
-        Serial.print(humidity, 1);
-        Serial.print("\t\t");
-        Serial.print(temperature, 1);
-        Serial.print("\t\t");
-        Serial.print(dht.computeHeatIndex(temperature, humidity, false), 1);
-        Serial.print("\n");
-        ThingPropertyValue tempValue;
-        tempValue.number = temperature;
-        tempSensorProperty.setValue(tempValue);
-        ThingPropertyValue humidityValue;
-        humidityValue.number = humidity;
-        humiditySensorProperty.setValue(humidityValue);
-        isTimeToSample = false;
-    }
 }
