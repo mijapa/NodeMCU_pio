@@ -1,11 +1,11 @@
+#include "ccs811.h"
+#include "Adafruit_CCS811.h"
 #include <Wire.h>
 #include <SPI.h>
-#include <Adafruit_BMP280.h>
-#include "bmp280.h"
 
-Adafruit_BMP280 bmp; // I2C
+Adafruit_CCS811 ccs;
 
-void check_if_exist_I2C() {
+void check_if_exist_I2C_() {
     byte error, address;
     int nDevices;
     nDevices = 0;
@@ -36,25 +36,29 @@ void check_if_exist_I2C() {
     //delay(1000);           // wait 1 seconds for next scan, did not find it necessary
 }
 
-void setup_bmp280() {
-    Wire.begin(D2, D3);
-    check_if_exist_I2C();
-    while (!bmp.begin(0x76)) {
-        Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
+void setup_ccs811() {
+    Serial.begin(115200);
+//    Wire.begin(D2, D3);
+//    delay(100);
+//    check_if_exist_I2C_();
+    while (!ccs.begin()) {
+        Serial.println("Failed to start sensor! Please check your wiring.");
     }
-
-    /* Default settings from datasheet. */
-    bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
-                    Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
-                    Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
-                    Adafruit_BMP280::FILTER_X16,      /* Filtering. */
-                    Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
 }
 
-double read_bmp280_temp() {
-    return bmp.readTemperature();
+double read_ccs811_eco2() {
+    if (ccs.available()) {
+        if (!ccs.readData()) {
+            return ccs.geteCO2();
+        }
+    }
+    return -10;
 }
 
-double read_bmp280_pressure() {
-    return bmp.readPressure() / 100;
+double read_ccs811_tvoc() {
+    return ccs.getTVOC();
+}
+
+double read_ccs811_temp() {
+    return ccs.calculateTemperature();
 }

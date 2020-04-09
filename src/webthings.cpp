@@ -9,6 +9,13 @@ void setupWebthings() {
     adapter = new WebThingAdapter("NodeMCU1", WiFi.localIP());
     setup_webthing_flower_humidity(adapter);
     setup_webthing_bmp280(adapter);
+
+    adapter->begin();
+    Serial.println("HTTP server started");
+    Serial.print("http://");
+    Serial.print(WiFi.localIP());
+    Serial.print("/things/");
+    Serial.print("\n\n");
 }
 
 void loopWebthings() {

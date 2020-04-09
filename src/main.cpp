@@ -1,11 +1,8 @@
 #include <Arduino.h>
-#include "bmp280.h"
+#include "ccs811.h"
 #include "ota.h"
 #include "webthings.h"
 #include "wifiManager.h"
-
-
-#define BUILTIN_LED D4
 
 #ifdef ESP32
 #pragma message(THIS EXAMPLE IS FOR ESP8266 ONLY!)
@@ -17,12 +14,12 @@ void setup() {
     Serial.println();
     setupWiFi();
     setupOTA();
-    setup_bmp280();
+    setup_ccs811();
     setupWebthings();
 }
 
 void loop() {
     loopOTA();
     loopWebthings();
-    delay(100);
+    delay(2000);
 }
