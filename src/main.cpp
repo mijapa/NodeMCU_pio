@@ -3,6 +3,7 @@
 #include "ota.h"
 #include "webthings.h"
 #include "wifiManager.h"
+#include "dht.h"
 
 #ifdef ESP32
 #pragma message(THIS EXAMPLE IS FOR ESP8266 ONLY!)
@@ -15,11 +16,13 @@ void setup() {
     setupWiFi();
     setupOTA();
     setup_bmp280();
+    setupDHT();
     setupWebthings();
 }
 
 void loop() {
     loopOTA();
+    loopDHT();
     loopWebthings();
     delay(2000);
 }
