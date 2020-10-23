@@ -1,3 +1,4 @@
+#define ARDUINOJSON_USE_LONG_LONG 1
 #include "WebThingAdapter.h"
 #include "bmp280_webthing.h"
 #include "bmp280.h"

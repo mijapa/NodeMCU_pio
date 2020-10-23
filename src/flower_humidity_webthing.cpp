@@ -1,3 +1,4 @@
+#define ARDUINOJSON_USE_LONG_LONG 1
 #include "WebThingAdapter.h"
 #include "flower_humidity_webthing.h"
 #include "flower_humidity.h"
