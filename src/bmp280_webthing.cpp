@@ -1,4 +1,7 @@
 #define ARDUINOJSON_USE_LONG_LONG 1
+#define LARGE_JSON_DOCUMENT_SIZE 8192
+#define SMALL_JSON_DOCUMENT_SIZE 4096
+
 #include "WebThingAdapter.h"
 #include "bmp280_webthing.h"
 #include "bmp280.h"

@@ -1,5 +1,7 @@
 #define ARDUINOJSON_USE_LONG_LONG 1
-#define LARGE_JSON_BUFFERS 1
+#define LARGE_JSON_DOCUMENT_SIZE 8192
+#define SMALL_JSON_DOCUMENT_SIZE 4096
+
 #include "webthings.h"
 #include "bmp280_webthing.h"
 #include "flower_humidity_webthing.h"
