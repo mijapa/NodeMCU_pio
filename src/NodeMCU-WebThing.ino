@@ -2,10 +2,7 @@
 #include <Ticker.h>
 #include "Thing.h"
 #include "WebThingAdapter.h"
-#include <Adafruit_NeoPixel.h>
 #include <ArduinoOTA.h>
-#include <user_config.h>
-#include <ESPAsyncWebServer.h>     //Local WebServer used to serve the configuration portal
 #include <ESPAsyncWiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
 #include <DNSServer.h>
 
